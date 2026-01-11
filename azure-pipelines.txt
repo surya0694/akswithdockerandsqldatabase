@@ -1,0 +1,77 @@
+trigger:
+- none
+
+pool:
+ vmImage: ubuntu-latest
+
+variables:
+  SQLserver: 'nextopssqlst26'
+  DatabaseName: 'mhdb'
+  SQLserverfqdn: 'nextopssqlst26.database.windows.net'
+  ACRName: 'nextopsacrt26.azurecr.io'
+
+stages:
+- stage: Build
+  displayName: AKS Build Stage
+  jobs:
+  - job: Build
+    steps:
+      - task: AzureKeyVault@1
+        inputs:
+          azureSubscription: 'Pay-As-You-Go (a355c32e-4a22-4b05-aab4-be236850fa6e)'
+          KeyVaultName: 'nextopsakvt26'
+          SecretsFilter: '*'
+          RunAsPreJob: true
+      
+      - task: replacetokens@5
+        inputs:
+          rootDirectory: '$(build.sourcesdirectory)/env'
+          targetFiles: 'main.tf'
+          encoding: 'auto'
+          tokenPattern: 'rm'
+          writeBOM: true
+          actionOnMissing: 'warn'
+          keepToken: false
+          actionOnNoFiles: 'continue'
+          enableTransforms: false
+          enableRecursion: false
+          useLegacyPattern: false
+          enableTelemetry: true
+      
+      - task: TerraformInstaller@0
+        inputs:
+          terraformVersion: 'latest'
+
+      - task: TerraformTaskV2@2
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(build.sourcesdirectory)/env'
+          backendServiceArm: 'Pay-As-You-Go (a355c32e-4a22-4b05-aab4-be236850fa6e)'
+          backendAzureRmResourceGroupName: 'NextOps'
+          backendAzureRmStorageAccountName: 'nextopssat01'
+          backendAzureRmContainerName: 'tfstate'
+          backendAzureRmKey: 'AKS.tfstate'
+      
+      - task: TerraformTaskV2@2
+        inputs:
+          provider: 'azurerm'
+          command: 'apply'
+          workingDirectory: '$(build.sourcesdirectory)/env'
+          commandOptions: '--auto-approve'
+          environmentServiceNameAzureRM: 'Pay-As-You-Go (a355c32e-4a22-4b05-aab4-be236850fa6e)'
+        
+      - task: replacetokens@5
+        inputs:
+          rootDirectory: '$(build.sourcesdirectory)/src/MyHealth.Web'
+          targetFiles: 'appsettings.json'
+          encoding: 'auto'
+          tokenPattern: 'rm'
+          writeBOM: true
+          actionOnMissing: 'warn'
+          keepToken: false
+          actionOnNoFiles: 'continue'
+          enableTransforms: false
+          enableRecursion: false
+          useLegacyPattern: false
+          enableTelemetry: true
