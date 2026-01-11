@@ -1,0 +1,6 @@
+rg_name = "AKSRG26"
+rg_location = "WestUS"
+vnet_name = "AKSVNET26"
+subnet01_name = "Subnet01"
+acr_name = "suryanewdevacr26"
+aks_name = "suryanewdevaks26"
